@@ -443,12 +443,37 @@
         tableBody.innerHTML = "";
         let hasData = false;
 
+        const alwaysShowKeys = [
+          "rbc_ap",
+          "rbc_bp",
+          "rbc_abp",
+          "rbc_op",
+          "plasma_ap",
+          "plasma_bp",
+          "plasma_abp",
+          "plasma_op",
+        ];
+
         keys.forEach((key) => {
           const value = parseInt(document.getElementById(key).value) || 0;
-          if (value > 0) {
+          shouldShow = false;
+
+          if (alwaysShowKeys.includes(key)) {
+            // الفصائل المحددة (الموجبة للكرات والبلازما) تظهر دائماً
+            shouldShow = true;
+          } else if (value > 0) {
+            // باقي الفصائل (السالبة أو الصفائح) تظهر فقط إذا كانت قيمتها أكبر من 0
+            shouldShow = true;
+          }
+
+          if (shouldShow) {
             hasData = true;
             const componentName = getComponentName(key);
-            const typeName = getTypeName(key);
+            var typeName = getTypeName(key);
+
+            if (key.includes("plasma")) {
+              typeName = typeName.replace("+", "");
+            }
 
             const row = document.createElement("tr");
             row.innerHTML = `
