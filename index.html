@@ -1,9 +1,153 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>بنك الدم</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="script.js" defer></script>
   </head>
-  <body></body>
+  <body>
+    <div id="main-container" class="container">
+      <h1>بنك دم مستشفى برج العرب</h1>
+      <div class="clock-display" id="live-clock">الوقت الحالي: 00:00:00</div>
+
+      <div class="cards-container">
+        <div class="card">
+          <h3>كرات الدم (RBCs)</h3>
+          <div class="inputs-grid">
+            <div class="input-group">
+              <label>+A</label
+              ><input type="number" id="rbc_ap" value="5" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-A</label
+              ><input type="number" id="rbc_am" value="2" min="0" />
+            </div>
+            <div class="input-group">
+              <label>+B</label
+              ><input type="number" id="rbc_bp" value="1" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-B</label
+              ><input type="number" id="rbc_bm" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>+AB</label
+              ><input type="number" id="rbc_abp" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-AB</label
+              ><input type="number" id="rbc_abm" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>+O</label
+              ><input type="number" id="rbc_op" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-O</label
+              ><input type="number" id="rbc_om" value="0" min="0" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>البلازما (Plasma)</h3>
+          <div class="inputs-grid">
+            <div class="input-group">
+              <label>A</label
+              ><input type="number" id="plasma_ap" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>B</label
+              ><input type="number" id="plasma_bp" value="2" min="0" />
+            </div>
+            <div class="input-group">
+              <label>AB</label
+              ><input type="number" id="plasma_abp" value="3" min="0" />
+            </div>
+            <div class="input-group">
+              <label>O</label
+              ><input type="number" id="plasma_op" value="0" min="0" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>الصفائح (Platelets)</h3>
+          <div class="inputs-grid">
+            <div class="input-group">
+              <label>+A</label
+              ><input type="number" id="plat_ap" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-A</label
+              ><input type="number" id="plat_am" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>+B</label
+              ><input type="number" id="plat_bp" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-B</label
+              ><input type="number" id="plat_bm" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>+AB</label
+              ><input type="number" id="plat_abp" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-AB</label
+              ><input type="number" id="plat_abm" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>+O</label
+              ><input type="number" id="plat_op" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-O</label
+              ><input type="number" id="plat_om" value="0" min="0" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-action" onclick="saveData()">حفظ التعديلات</button>
+      <button class="btn-action btn-secondary" onclick="showSimplifiedView()">
+        التقاط صورة للجدول
+      </button>
+      <div id="notification" class="notification">تم حفظ البيانات بنجاح!</div>
+    </div>
+
+    <div id="result-container" class="container hidden">
+      <div id="capture-area">
+        <h2 style="text-align: center; color: var(--primary-color)">
+          رصيد بنك الدم
+        </h2>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>المكون</th>
+                <th>الفصيلة</th>
+                <th>العدد</th>
+              </tr>
+            </thead>
+            <tbody id="simplified-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <button class="btn-action btn-success" onclick="captureImage()">
+        📸 حفظ الصورة (تحميل فى التليفون)
+      </button>
+      <button class="btn-action btn-whatsapp" onclick="shareViaWhatsApp()">
+        📱 إرسال إلى الواتساب
+      </button>
+      <button class="btn-action btn-secondary" onclick="goBack()">
+        🔙 العودة للتعديل
+      </button>
+    </div>
+  </body>
 </html>
