@@ -9,6 +9,10 @@
     />
     <title>بنك الدم</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
     <style>
       :root {
         --primary-color: #d9534f;
@@ -321,6 +325,43 @@
             </div>
           </div>
         </div>
+        <div class="card">
+          <h3>الأجزاء (Parts)</h3>
+          <div class="inputs-grid">
+            <div class="input-group">
+              <label>A+</label>
+              <input type="number" id="part_ap" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-A</label
+              ><input type="number" id="part_am" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>+B</label
+              ><input type="number" id="part_bp" value="1" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-B</label
+              ><input type="number" id="part_bm" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>+AB</label
+              ><input type="number" id="part_abp" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-AB</label
+              ><input type="number" id="part_abm" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>+O</label
+              ><input type="number" id="part_op" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>-O</label
+              ><input type="number" id="part_om" value="0" min="0" />
+            </div>
+          </div>
+        </div>
       </div>
 
       <button class="btn-action" onclick="saveData()">حفظ التعديلات</button>
@@ -360,12 +401,30 @@
         🔙 العودة للتعديل
       </button>
     </div>
+
     <footer>
       copyright &copy; 2026
       <a href="https://mahmoud-ghallab.netlify.app/">Mahmoud Ghallab</a> All
       rights reserved.
     </footer>
+
     <script>
+      // إعدادات الـ Firebase
+      const firebaseConfig = {
+        apiKey: "AIzaSyAxNF-LUEXkkNeMuHLdQk0P1mOcrQ-eSBs",
+        authDomain: "blood-bank-ac7b7.firebaseapp.com",
+        databaseURL: "https://blood-bank-ac7b7-default-rtdb.firebaseio.com",
+        projectId: "blood-bank-ac7b7",
+        storageBucket: "blood-bank-ac7b7.firebasestorage.app",
+        messagingSenderId: "552669588269",
+        appId: "1:552669588269:web:889381a9589099032fc1a4",
+        measurementId: "G-QLPK15DWGT",
+      };
+
+      // تهيئة Firebase
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
+
       const keys = [
         "rbc_ap",
         "rbc_am",
@@ -387,16 +446,44 @@
         "plat_abm",
         "plat_op",
         "plat_om",
+        "part_ap",
+        "part_am",
+        "part_bp",
+        "part_bm",
+        "part_abp",
+        "part_abm",
+        "part_op",
+        "part_om",
       ];
 
-      // 1. استرجاع البيانات عند التحميل وتشغيل الساعة
+      // 1. استرجاع البيانات عند التحميل وتشغيل الساعة والاتصال بـ Firebase
       window.onload = function () {
+        // قراءة القيم الأولية من التخزين المحلي (لضمان سرعة الاستجابة)
         keys.forEach((key) => {
           const savedValue = localStorage.getItem(key);
           if (savedValue !== null) {
             document.getElementById(key).value = savedValue;
           }
         });
+
+        // جلب أحدث البيانات من قاعدة البيانات ومزامنتها
+        db.ref("blood_bank")
+          .once("value")
+          .then((snapshot) => {
+            if (snapshot.exists()) {
+              const data = snapshot.val();
+              keys.forEach((key) => {
+                if (data[key] !== undefined) {
+                  document.getElementById(key).value = data[key];
+                  localStorage.setItem(key, data[key]); // حفظ القراءة الحديثة محلياً أيضاً
+                }
+              });
+            }
+          })
+          .catch((error) => {
+            console.error("تعذر جلب البيانات من Firebase:", error);
+          });
+
         keys.forEach((key) => {
           const input = document.getElementById(key);
 
@@ -440,18 +527,28 @@
         }
       }
 
-      // 2. حفظ البيانات
+      // 2. حفظ البيانات في الـ Firebase والـ LocalStorage
       function saveData() {
+        const updates = {};
         keys.forEach((key) => {
           const inputValue = document.getElementById(key).value;
+          updates[key] = parseInt(inputValue) || 0;
           localStorage.setItem(key, inputValue);
         });
 
-        const notification = document.getElementById("notification");
-        notification.style.display = "block";
-        setTimeout(() => {
-          notification.style.display = "none";
-        }, 3000);
+        // إرسال البيانات إلى Firebase
+        db.ref("blood_bank")
+          .update(updates)
+          .then(() => {
+            const notification = document.getElementById("notification");
+            notification.style.display = "block";
+            setTimeout(() => {
+              notification.style.display = "none";
+            }, 3000);
+          })
+          .catch((error) => {
+            alert("حدث خطأ أثناء حفظ البيانات: " + error.message);
+          });
       }
 
       // 3. الانتقال لشاشة الجدول المبسط
@@ -476,20 +573,18 @@
 
         keys.forEach((key) => {
           const value = parseInt(document.getElementById(key).value) || 0;
-          shouldShow = false;
+          let shouldShow = false;
 
           if (alwaysShowKeys.includes(key)) {
-            // الفصائل المحددة (الموجبة للكرات والبلازما) تظهر دائماً
             shouldShow = true;
           } else if (value > 0) {
-            // باقي الفصائل (السالبة أو الصفائح) تظهر فقط إذا كانت قيمتها أكبر من 0
             shouldShow = true;
           }
 
           if (shouldShow) {
             hasData = true;
             const componentName = getComponentName(key);
-            var typeName = getTypeName(key);
+            let typeName = getTypeName(key);
 
             if (key.includes("plasma")) {
               typeName = typeName.replace("+", "");
@@ -497,10 +592,10 @@
 
             const row = document.createElement("tr");
             row.innerHTML = `
-                        <td><b>${componentName}</b></td>
-                        <td>${typeName}</td>
-                        <td><b>${value}</b></td>
-                    `;
+              <td><b>${componentName}</b></td>
+              <td>${typeName}</td>
+              <td><b>${value}</b></td>
+            `;
             tableBody.appendChild(row);
           }
         });
@@ -538,12 +633,10 @@
 
         html2canvas(captureArea, { scale: 2 }).then((canvas) => {
           canvas.toBlob(function (blob) {
-            // إنشاء ملف صورة
             const file = new File([blob], "blood-components.png", {
               type: "image/png",
             });
 
-            // التحقق مما إذا كان المتصفح يدعم المشاركة الأصلية
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
               navigator
                 .share({
@@ -553,7 +646,6 @@
                 })
                 .catch((error) => console.log("خطأ في المشاركة", error));
             } else {
-              // إذا كان الجهاز لا يدعم (مثل بعض أجهزة الكمبيوتر)، سيتم تحميل الصورة بدلاً من ذلك
               captureImage();
               alert(
                 "المتصفح لا يدعم المشاركة المباشرة، تم تنزيل الصورة تلقائياً لتقوم بإرسالها يدوياً.",
@@ -567,6 +659,7 @@
         if (key.startsWith("rbc_")) return "كرات الدم (RBCs)";
         if (key.startsWith("plasma_")) return "البلازما (Plasma)";
         if (key.startsWith("plat_")) return "الصفائح (Platelets)";
+        if (key.startsWith("part_")) return "الأجزاء (Parts)";
         return "";
       }
 
