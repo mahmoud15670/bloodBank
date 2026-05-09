@@ -19,7 +19,9 @@
       "name": "عرض الرصيد",
       "short_name": "رصيد الدم",
       "url": "./",
-      "icons": [{ "src": "./logo.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [
+        { "src": "./logo.svg", "sizes": "any", "type": "image/svg+xml" }
+      ]
     }
   ]
 }
