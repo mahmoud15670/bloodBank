@@ -8,9 +8,9 @@
       name="description"
       content="تطبيق بنك الدم لإدارة رصيد الدم وإرسال إشعارات عند تحديث الرصيد."
     />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="icon" href="/logo.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/logo.svg" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./logo.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./logo.svg" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
@@ -519,7 +519,7 @@
       function registerServiceWorker() {
         if ("serviceWorker" in navigator) {
           navigator.serviceWorker
-            .register("/sw.js")
+            .register("./sw.js")
             .then((registration) => {
               console.log("Service Worker registered:", registration.scope);
             })
@@ -579,8 +579,8 @@
 
         const options = {
           body,
-          icon: "/logo.svg",
-          badge: "/logo.svg",
+          icon: "./logo.svg",
+          badge: "./logo.svg",
         };
 
         if (navigator.serviceWorker && navigator.serviceWorker.ready) {
