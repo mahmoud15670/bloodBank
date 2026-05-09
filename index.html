@@ -570,7 +570,10 @@
       }
 
       function showAppNotification(title, body) {
-        if (!("Notification" in window) || Notification.permission !== "granted") {
+        if (
+          !("Notification" in window) ||
+          Notification.permission !== "granted"
+        ) {
           return;
         }
 
@@ -608,10 +611,13 @@
 
         if ((h === 7 || h === 19) && m === 0) {
           const title = "⏰ تحديث رصيد بنك الدم";
-          const body = `تم تحديث الرصيد الآن عند ${now.toLocaleTimeString("ar-EG", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}`;
+          const body = `تم تحديث الرصيد الآن عند ${now.toLocaleTimeString(
+            "ar-EG",
+            {
+              hour: "2-digit",
+              minute: "2-digit",
+            },
+          )}`;
           showAppNotification(title, body);
           showSimplifiedView();
         }
