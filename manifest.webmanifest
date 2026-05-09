@@ -4,7 +4,7 @@
   "description": "تطبيق بنك الدم لإدارة رصيد الدم وإرسال إشعارات عند تحديث الرصيد.",
   "start_url": "./",
   "display": "standalone",
-  "scope": "/",
+  "scope": "./",
   "background_color": "#f4f7f6",
   "theme_color": "#d9534f",
   "icons": [
