@@ -604,22 +604,33 @@
         setInterval(updateClock, 1000);
       }
 
+      let lastAlarmTime = null;
+
       function checkAlarm() {
         const now = new Date();
         const h = now.getHours();
         const m = now.getMinutes();
+        const currentTime = h + ":" + String(m).padStart(2, "0");
 
-        if ((h === 7 || h === 19) && m === 0) {
-          const title = "⏰ تحديث رصيد بنك الدم";
-          const body = `تم تحديث الرصيد الآن عند ${now.toLocaleTimeString(
-            "ar-EG",
-            {
-              hour: "2-digit",
-              minute: "2-digit",
-            },
-          )}`;
-          showAppNotification(title, body);
-          showSimplifiedView();
+        console.log("Checking alarm - Current time: " + currentTime);
+
+        // فحص الوقت مع هامش 5 دقائق لتجنب المشاكل
+        if ((h === 7 || h === 19) && m >= 0 && m < 5) {
+          // تجنب إرسال الإشعار أكثر من مرة في نفس الدقيقة
+          if (lastAlarmTime !== currentTime) {
+            lastAlarmTime = currentTime;
+            const title = "⏰ تحديث رصيد بنك الدم";
+            const body = `تم تحديث الرصيد الآن عند ${now.toLocaleTimeString(
+              "ar-EG",
+              {
+                hour: "2-digit",
+                minute: "2-digit",
+              },
+            )}`;
+            console.log("Alarm triggered! Time:", currentTime);
+            showAppNotification(title, body);
+            showSimplifiedView();
+          }
         }
       }
 
