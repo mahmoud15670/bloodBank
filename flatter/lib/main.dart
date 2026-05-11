@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -112,11 +113,14 @@ class _BloodBankPageState extends State<BloodBankPage> {
   final Map<String, TextEditingController> _controllers = {};
   final ScreenshotController _screenshotController = ScreenshotController();
   bool _showSummary = false;
+  String _currentTime = '';
+  Timer? _timeTimer;
 
   @override
   void initState() {
     super.initState();
     _initializeControllers();
+    _startClock();
     _loadSavedValues();
     _loadRemoteValues();
     _requestPermissions();
@@ -218,6 +222,24 @@ class _BloodBankPageState extends State<BloodBankPage> {
     await androidImplementation?.requestExactAlarmsPermission();
   }
 
+  void _startClock() {
+    _updateTime();
+    _timeTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _updateTime();
+    });
+  }
+
+  void _updateTime() {
+    if (!mounted) return;
+    final now = DateTime.now();
+    setState(() {
+      _currentTime =
+          '${_twoDigits(now.hour)}:${_twoDigits(now.minute)}:${_twoDigits(now.second)}';
+    });
+  }
+
+  String _twoDigits(int value) => value.toString().padLeft(2, '0');
+
   Future<void> _showNotification({
     required String title,
     required String body,
@@ -237,6 +259,57 @@ class _BloodBankPageState extends State<BloodBankPage> {
       body: body,
       notificationDetails: notificationDetails,
     );
+  }
+
+  Future<void> _scheduleNotificationInSeconds(
+    int seconds,
+    String title,
+    String body,
+  ) async {
+    final scheduledDate = tz.TZDateTime.now(
+      tz.local,
+    ).add(Duration(seconds: seconds));
+    const androidDetails = AndroidNotificationDetails(
+      'blood_bank_channel',
+      'Blood Bank Notifications',
+      channelDescription: 'إشعارات بنك الدم المحلية',
+      importance: Importance.max,
+      priority: Priority.high,
+      ticker: 'ticker',
+    );
+    const notificationDetails = NotificationDetails(android: androidDetails);
+
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      id: 99,
+      title: title,
+      body: body,
+      scheduledDate: scheduledDate,
+      notificationDetails: notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    );
+  }
+
+  Future<void> _resetValues() async {
+    setState(() {
+      for (final controller in _controllers.values) {
+        controller.text = '0';
+      }
+    });
+    await _saveLocalValues();
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('تم إعادة ضبط جميع القيم.')));
+    }
+  }
+
+  Future<void> _refreshValues() async {
+    await _loadRemoteValues();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم تحديث القيم من قاعدة البيانات.')),
+      );
+    }
   }
 
   Future<void> _scheduleDailyNotification(
@@ -339,6 +412,7 @@ class _BloodBankPageState extends State<BloodBankPage> {
     for (final controller in _controllers.values) {
       controller.dispose();
     }
+    _timeTimer?.cancel();
     super.dispose();
   }
 
@@ -524,10 +598,10 @@ class _BloodBankPageState extends State<BloodBankPage> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.red.shade100),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      'الوقت الحالي: تحديث تلقائي',
-                      style: TextStyle(
+                      'الوقت الحالي: ${_currentTime.isEmpty ? 'جارٍ التحميل...' : _currentTime}',
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         color: Colors.red,
                       ),
@@ -562,6 +636,34 @@ class _BloodBankPageState extends State<BloodBankPage> {
                           backgroundColor: Colors.green,
                         ),
                         child: const Text('عرض إشعار الآن'),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: () => _scheduleNotificationInSeconds(
+                          5,
+                          'إشعار مجدول',
+                          'سيظهر هذا الإشعار بعد 5 ثوانٍ.',
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                        ),
+                        child: const Text('جدولة إشعار بعد 5 ثواني'),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: _refreshValues,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueGrey,
+                        ),
+                        child: const Text('تحديث القيم من السحابة'),
+                      ),
+                      const SizedBox(height: 10),
+                      ElevatedButton(
+                        onPressed: _resetValues,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                        ),
+                        child: const Text('إعادة ضبط جميع القيم'),
                       ),
                     ],
                   ),

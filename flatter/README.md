@@ -27,6 +27,8 @@ A Flutter application for blood bank management with local notifications.
 
 - Press "Show Notification Now" to display an immediate notification
 - Press "Schedule Notification in 5 seconds" to schedule a notification
+- Press "Refresh values from cloud" to reload the latest inventory from Firebase
+- Press "Reset all values" to clear the current inventory locally
 
 ## Permissions
 
