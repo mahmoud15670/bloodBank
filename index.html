@@ -383,6 +383,45 @@
             </div>
           </div>
         </div>
+        <div class="card">
+          <h3>منصرف</h3>
+          <div class="inputs-grid">
+            <div class="input-group">
+              <label>دم</label>
+              <input type="number" id="discharged_blood" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>بلازما</label>
+              <input type="number" id="discharged_plasma" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>صفائح</label>
+              <input
+                type="number"
+                id="discharged_platelets"
+                value="0"
+                min="0"
+              />
+            </div>
+            <div class="input-group">
+              <label>أجزاء</label>
+              <input type="number" id="discharged_parts" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>فصيله</label>
+              <input type="number" id="discharged_serum" value="0" min="0" />
+            </div>
+            <div class="input-group">
+              <label>توافق</label>
+              <input
+                type="number"
+                id="discharged_compatibility"
+                value="0"
+                min="0"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <button class="btn-action" onclick="saveData()">حفظ التعديلات</button>
@@ -407,6 +446,27 @@
               </tr>
             </thead>
             <tbody id="simplified-table-body"></tbody>
+          </table>
+        </div>
+
+        <h2
+          style="
+            text-align: center;
+            color: var(--primary-color);
+            margin-top: 30px;
+          "
+        >
+          المنصرف
+        </h2>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>النوع</th>
+                <th>العدد</th>
+              </tr>
+            </thead>
+            <tbody id="discharged-table-body"></tbody>
           </table>
         </div>
       </div>
@@ -484,6 +544,12 @@
         "part_abm",
         "part_op",
         "part_om",
+        "discharged_blood",
+        "discharged_plasma",
+        "discharged_platelets",
+        "discharged_parts",
+        "discharged_serum",
+        "discharged_compatibility",
       ];
 
       window.onload = function () {
@@ -492,9 +558,12 @@
 
         // تحميل القيم المحفوظة محلياً
         keys.forEach((key) => {
-          const savedValue = localStorage.getItem(key);
-          if (savedValue !== null) {
-            document.getElementById(key).value = savedValue;
+          const element = document.getElementById(key);
+          if (element) {
+            const savedValue = localStorage.getItem(key);
+            if (savedValue !== null) {
+              element.value = savedValue;
+            }
           }
         });
 
@@ -512,8 +581,11 @@
                     const data = snapshot.val();
                     keys.forEach((key) => {
                       if (data[key] !== undefined) {
-                        document.getElementById(key).value = data[key];
-                        localStorage.setItem(key, data[key]);
+                        const element = document.getElementById(key);
+                        if (element) {
+                          element.value = data[key];
+                          localStorage.setItem(key, data[key]);
+                        }
                       }
                     });
                     connectionRetries = 0; // Reset on success
@@ -544,15 +616,17 @@
         // إضافة event listeners للـinputs
         keys.forEach((key) => {
           const input = document.getElementById(key);
-          input.addEventListener("click", function () {
-            this.dataset.oldValue = this.value;
-            this.value = "";
-          });
-          input.addEventListener("blur", function () {
-            if (this.value === "") {
-              this.value = this.dataset.oldValue || "";
-            }
-          });
+          if (input) {
+            input.addEventListener("click", function () {
+              this.dataset.oldValue = this.value;
+              this.value = "";
+            });
+            input.addEventListener("blur", function () {
+              if (this.value === "") {
+                this.value = this.dataset.oldValue || "";
+              }
+            });
+          }
         });
 
         startClock();
@@ -693,9 +767,17 @@
 
         const updates = {};
         keys.forEach((key) => {
-          const inputValue = document.getElementById(key).value;
-          updates[key] = parseInt(inputValue) || 0;
-          localStorage.setItem(key, inputValue);
+          const inputElement = document.getElementById(key);
+          if (inputElement) {
+            const inputValue = inputElement.value;
+            // للحقول النصية (مثل compatibility)، احفظها كما هي
+            if (key === "discharged_compatibility") {
+              updates[key] = inputValue;
+            } else {
+              updates[key] = parseInt(inputValue) || 0;
+            }
+            localStorage.setItem(key, inputValue);
+          }
         });
 
         db.ref("blood_bank")
@@ -733,8 +815,12 @@
         const mainContainer = document.getElementById("main-container");
         const resultContainer = document.getElementById("result-container");
         const tableBody = document.getElementById("simplified-table-body");
+        const dischargedTableBody = document.getElementById(
+          "discharged-table-body",
+        );
 
         tableBody.innerHTML = "";
+        dischargedTableBody.innerHTML = "";
         let hasData = false;
 
         const alwaysShowKeys = [
@@ -748,8 +834,15 @@
           "plasma_op",
         ];
 
+        // ملء جدول الرصيد المتاح
         keys.forEach((key) => {
-          const value = parseInt(document.getElementById(key).value) || 0;
+          // تجاهل حقول المنصرف
+          if (key.startsWith("discharged_")) {
+            return;
+          }
+
+          const element = document.getElementById(key);
+          const value = element ? parseInt(element.value) || 0 : 0;
           let shouldShow = false;
 
           if (alwaysShowKeys.includes(key)) {
@@ -777,8 +870,30 @@
           }
         });
 
-        if (!hasData) {
-          alert("لا توجد فصائل بقيمة أكبر من صفر لالتقاطها!");
+        // ملء جدول المنصرف
+        const dischargedKeys = {
+          discharged_blood: "دم",
+          discharged_plasma: "بلازما",
+          discharged_serum: "فصيله",
+          discharged_compatibility: "توافق",
+          discharged_platelets: "صفائح",
+          discharged_parts: "أجزاء",
+        };
+
+        for (const [key, label] of Object.entries(dischargedKeys)) {
+          const element = document.getElementById(key);
+          const value = element.value || 0;
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+              <td><b>${label}</b></td>
+              <td>${value}</td>
+            `;
+          dischargedTableBody.appendChild(row);
+        }
+
+        if (!hasData && !hasDischargedData) {
+          alert("لا توجد بيانات لالتقاطها!");
           return;
         }
 
