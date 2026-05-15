@@ -442,14 +442,18 @@
         measurementId: "G-4JHNK5R8D1",
       };
 
-      // تهيئة Firebase
-      firebase.initializeApp(firebaseConfig);
-      const db = firebase.database();
-      const messaging = firebase.messaging();
-
-      // تفعيل persistence للـ offline support
-      db.goOffline();
-      db.goOnline();
+      // تهيئة Firebase مع معالجة الأخطاء
+      let db, messaging;
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.database();
+        messaging = firebase.messaging();
+        console.log("Firebase initialized successfully");
+      } catch (error) {
+        console.error("Firebase initialization error:", error);
+      }
 
       const keys = [
         "rbc_ap",
@@ -495,39 +499,47 @@
         });
 
         // الاستماع لتغييرات قاعدة البيانات مع retry logic
-        let connectionRetries = 0;
-        const maxRetries = 3;
+        if (db) {
+          let connectionRetries = 0;
+          const maxRetries = 3;
 
-        function setupDatabaseListener() {
-          db.ref("blood_bank").on(
-            "value",
-            (snapshot) => {
-              if (snapshot.exists()) {
-                const data = snapshot.val();
-                keys.forEach((key) => {
-                  if (data[key] !== undefined) {
-                    document.getElementById(key).value = data[key];
-                    localStorage.setItem(key, data[key]);
+          function setupDatabaseListener() {
+            try {
+              db.ref("blood_bank").on(
+                "value",
+                (snapshot) => {
+                  if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    keys.forEach((key) => {
+                      if (data[key] !== undefined) {
+                        document.getElementById(key).value = data[key];
+                        localStorage.setItem(key, data[key]);
+                      }
+                    });
+                    connectionRetries = 0; // Reset on success
                   }
-                });
-                connectionRetries = 0; // Reset on success
-              }
-            },
-            (error) => {
-              console.error("تعذر جلب البيانات من Firebase:", error);
-              // Retry connection for iOS compatibility
-              if (connectionRetries < maxRetries) {
-                connectionRetries++;
-                console.log(
-                  `محاولة إعادة الاتصال... (${connectionRetries}/${maxRetries})`,
-                );
-                setTimeout(setupDatabaseListener, 2000 * connectionRetries);
-              }
-            },
-          );
-        }
+                },
+                (error) => {
+                  console.error("تعذر جلب البيانات من Firebase:", error);
+                  // Retry connection for iOS compatibility
+                  if (connectionRetries < maxRetries) {
+                    connectionRetries++;
+                    console.log(
+                      `محاولة إعادة الاتصال... (${connectionRetries}/${maxRetries})`,
+                    );
+                    setTimeout(setupDatabaseListener, 2000 * connectionRetries);
+                  }
+                },
+              );
+            } catch (e) {
+              console.error("Error setting up database listener:", e);
+            }
+          }
 
-        setupDatabaseListener();
+          setupDatabaseListener();
+        } else {
+          console.warn("Firebase database not initialized yet");
+        }
 
         // إضافة event listeners للـinputs
         keys.forEach((key) => {
@@ -579,6 +591,11 @@
       }
 
       function getMessagingToken() {
+        if (!messaging) {
+          console.warn("Firebase messaging not initialized");
+          return;
+        }
+
         messaging
           .getToken({
             vapidKey:
@@ -588,10 +605,12 @@
             if (currentToken) {
               console.log("Registration token available:", currentToken);
               // حفظ التوكن في Firebase للإرسال لاحقاً
-              db.ref("notification_tokens").push({
-                token: currentToken,
-                timestamp: Date.now(),
-              });
+              if (db) {
+                db.ref("notification_tokens").push({
+                  token: currentToken,
+                  timestamp: Date.now(),
+                });
+              }
             } else {
               console.log("No registration token available.");
             }
@@ -667,6 +686,11 @@
       }
 
       function saveData() {
+        if (!db) {
+          alert("قاعدة البيانات لم تتم تهيئتها بعد. حاول مرة أخرى.");
+          return;
+        }
+
         const updates = {};
         keys.forEach((key) => {
           const inputValue = document.getElementById(key).value;
