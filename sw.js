@@ -58,11 +58,37 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
-    }),
-  );
+  // Network-first strategy for API calls and Firebase
+  if (
+    event.request.url.includes("firebaseio.com") ||
+    event.request.url.includes("googleapis.com") ||
+    event.request.method !== "GET"
+  ) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Cache successful responses
+          if (response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fall back to cache if offline
+          return caches.match(event.request);
+        }),
+    );
+  } else {
+    // Cache-first for static assets
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        return cachedResponse || fetch(event.request);
+      }),
+    );
+  }
 });
 
 self.addEventListener("notificationclick", (event) => {

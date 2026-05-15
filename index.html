@@ -2,12 +2,24 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
     <meta name="theme-color" content="#d9534f" />
     <meta
       name="description"
       content="تطبيق بنك الدم لإدارة رصيد الدم وإرسال إشعارات عند تحديث الرصيد."
     />
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="بنك الدم" />
+    <meta name="apple-itunes-app" content="app-id=not-in-app-store" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./logo.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./logo.svg" />
@@ -435,6 +447,10 @@
       const db = firebase.database();
       const messaging = firebase.messaging();
 
+      // تفعيل persistence للـ offline support
+      db.goOffline();
+      db.goOnline();
+
       const keys = [
         "rbc_ap",
         "rbc_am",
@@ -478,24 +494,40 @@
           }
         });
 
-        // الاستماع لتغييرات قاعدة البيانات
-        db.ref("blood_bank").on(
-          "value",
-          (snapshot) => {
-            if (snapshot.exists()) {
-              const data = snapshot.val();
-              keys.forEach((key) => {
-                if (data[key] !== undefined) {
-                  document.getElementById(key).value = data[key];
-                  localStorage.setItem(key, data[key]);
-                }
-              });
-            }
-          },
-          (error) => {
-            console.error("تعذر جلب البيانات من Firebase:", error);
-          },
-        );
+        // الاستماع لتغييرات قاعدة البيانات مع retry logic
+        let connectionRetries = 0;
+        const maxRetries = 3;
+
+        function setupDatabaseListener() {
+          db.ref("blood_bank").on(
+            "value",
+            (snapshot) => {
+              if (snapshot.exists()) {
+                const data = snapshot.val();
+                keys.forEach((key) => {
+                  if (data[key] !== undefined) {
+                    document.getElementById(key).value = data[key];
+                    localStorage.setItem(key, data[key]);
+                  }
+                });
+                connectionRetries = 0; // Reset on success
+              }
+            },
+            (error) => {
+              console.error("تعذر جلب البيانات من Firebase:", error);
+              // Retry connection for iOS compatibility
+              if (connectionRetries < maxRetries) {
+                connectionRetries++;
+                console.log(
+                  `محاولة إعادة الاتصال... (${connectionRetries}/${maxRetries})`,
+                );
+                setTimeout(setupDatabaseListener, 2000 * connectionRetries);
+              }
+            },
+          );
+        }
+
+        setupDatabaseListener();
 
         // إضافة event listeners للـinputs
         keys.forEach((key) => {
@@ -647,12 +679,29 @@
           .then(() => {
             const notification = document.getElementById("notification");
             notification.style.display = "block";
+            console.log("تم حفظ البيانات بنجاح");
             setTimeout(() => {
               notification.style.display = "none";
             }, 3000);
           })
           .catch((error) => {
-            alert("حدث خطأ أثناء حفظ البيانات: " + error.message);
+            console.error("خطأ في حفظ البيانات:", error);
+            // Retry on iOS connection issues
+            if (
+              error.code === "PERMISSION_DENIED" ||
+              error.code === "NETWORK_ERROR"
+            ) {
+              console.log("محاولة إعادة الحفظ...");
+              setTimeout(() => {
+                db.ref("blood_bank")
+                  .update(updates)
+                  .catch((retryError) => {
+                    alert("حدث خطأ أثناء حفظ البيانات: " + retryError.message);
+                  });
+              }, 1000);
+            } else {
+              alert("حدث خطأ أثناء حفظ البيانات: " + error.message);
+            }
           });
       }
 
